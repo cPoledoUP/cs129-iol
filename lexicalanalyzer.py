@@ -37,19 +37,53 @@ class LexicalAnalyzer:
     def __init__(self) -> None:
         self.keywords = ['IOL', 'LOI', 'INT', 'STR', 'IS', 'INTO', 'IS', 'BEG', 'PRINT', 'ADD', 'SUB', 'MULT', 'DIV', 'MOD', 'NEWLN']
 
-    def tokenize(self, string: str) -> list[list[str]]:
-        string_buffer = string.split()
-        token_string = list()
+    def tokenize(self, string: str) -> list:
+        """
+        Converts a given string into a series of tokens and line numbers of possible errors
 
-        for word in string_buffer:
-            token_string.append(self.word_to_token(word))
+        Parameters
+        ----------
+        string : str
+            An input string to tokenize
         
-        return token_string
+        Returns
+        -------
+        list
+            The first index contains a list of tokens and the second index contains a list of line numbers where ERR_LEX is found (in order)
+        """
 
-    def word_to_token(self, word : str) -> list[str]:
+        token_string = list()
+        error_lines = list()
+
+        curr_line = 0
+        for line in string.splitlines():
+            curr_line += 1
+            for word in line.split():
+                token = self.word_to_token(word)
+                token_string.append(token)
+                if token[0] == 'ERR_LEX':
+                    error_lines.append(curr_line)
+        
+        return [token_string, error_lines]
+
+    def word_to_token(self, word : str) -> tuple:
+        """
+        Converts a word into a token
+
+        Parameters
+        ---------
+        word : str
+            The word to convert into token
+        
+        Returns
+        -------
+        tuple
+            A token in the format (TOKEN_NAME, VALUE)
+        """
+
         # check if word is keyword
         if word in self.keywords:
-            return [word, word]
+            return (word, word)
         # check if word is an int_lit or ident or err_lex
         else:
             # Logic:
@@ -66,7 +100,7 @@ class LexicalAnalyzer:
             possible_token = ''
             for letter in word:
                 if possible_token == 'ERR_LEX':
-                    return ['ERR_LEX', 'ERR_LEX']
+                    break
                 
                 if letter.isnumeric():
                     if possible_token == '' or possible_token == 'INT_LIT':
@@ -81,10 +115,10 @@ class LexicalAnalyzer:
                 else:
                     possible_token = 'ERR_LEX'
             
-            return [possible_token, word]
+            return (possible_token, word)
 
 # testing area
-testfile = open('test.iol')
+testfile = open('bad.iol')
 test = testfile.read()
 testfile.close()
 print(LexicalAnalyzer().tokenize(test))
