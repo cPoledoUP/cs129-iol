@@ -35,7 +35,7 @@ class LexicalAnalyzer:
     """
 
     def __init__(self) -> None:
-        self.keywords = ['IOL', 'LOI', 'INT', 'STR', 'IS', 'INTO', 'IS', 'BEG', 'PRINT', 'ADD', 'SUB', 'MULT', 'DIV', 'MOD', 'NEWLN']
+        self.keywords = ('IOL', 'LOI', 'INT', 'STR', 'IS', 'INTO', 'IS', 'BEG', 'PRINT', 'ADD', 'SUB', 'MULT', 'DIV', 'MOD', 'NEWLN')
 
     def tokenize(self, string: str) -> list:
         """
@@ -66,7 +66,7 @@ class LexicalAnalyzer:
         
         return [token_string, error_lines]
 
-    def word_to_token(self, word : str) -> tuple:
+    def word_to_token(self, word: str) -> tuple:
         """
         Converts a word into a token
 
