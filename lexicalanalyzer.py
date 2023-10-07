@@ -26,12 +26,15 @@ class LexicalAnalyzer:
 
     Attributes
     ----------
-    tba
+    keywords : tuple
+        A list of keywords used by the programming language
 
     Methods
     ----------
-    tokenize(src)
-        Converts a given 
+    tokenize(string)
+        Converts a given string into a series of tokens and line numbers of possible errors
+    word_to_token(word)
+        Converts a word into a token
     """
 
     def __init__(self) -> None:
