@@ -52,7 +52,7 @@ class LexicalAnalyzer:
         Returns
         -------
         list
-            The first index contains a list of tokens and the second index contains a list of line numbers where ERR_LEX is found (in order)
+            The first index contains a list of tokens and the second index contains a list of tuple of an unknown word with line number
         """
 
         token_string = list()
@@ -65,7 +65,7 @@ class LexicalAnalyzer:
                 token = self.word_to_token(word)
                 token_string.append(token)
                 if token[0] == 'ERR_LEX':
-                    error_lines.append(curr_line)
+                    error_lines.append((token[1], curr_line))
         
         return [token_string, error_lines]
 
