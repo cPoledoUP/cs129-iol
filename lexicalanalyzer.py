@@ -1,12 +1,3 @@
-"""
-INT_LIT => digit {digit}
-digit => 0 | 1 | ... | 9
-
-IDENT => letter {(letter | digit)}
-letter => a | b | c | ... | z | A | B | ... | Z
-digit => 0 | 1 | ... | 9
-"""
-
 class LexicalAnalyzer:
     """
     A class that converts a source file into tokens for the IOL language.
@@ -119,9 +110,3 @@ class LexicalAnalyzer:
                     possible_token = 'ERR_LEX'
             
             return (possible_token, word)
-
-# testing area
-testfile = open('bad.iol')
-test = testfile.read()
-testfile.close()
-print(LexicalAnalyzer().tokenize(test))
