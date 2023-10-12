@@ -217,6 +217,8 @@ class App:
         self.input_text.delete("1.0", tk.END)
         self.update_line_numbers()
         self.menu.entryconfig(3, state=tk.DISABLED)
+        for child in self.variables_text.get_children():
+            self.variables_text.delete(child)
 
     def open_file(self):
         """
@@ -234,6 +236,8 @@ class App:
                 self.input_text.insert(tk.END, content)
             self.update_line_numbers()
             self.menu.entryconfig(3, state=tk.DISABLED)
+            for child in self.variables_text.get_children():
+                self.variables_text.delete(child)
 
             self.output_text.configure(state=tk.NORMAL)
             self.output_text.insert(tk.END, f"Opened {self.file_path}\n\n")
@@ -251,6 +255,8 @@ class App:
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
             self.menu.entryconfig(3, state=tk.DISABLED)
+            for child in self.variables_text.get_children():
+                self.variables_text.delete(child)
 
             self.output_text.configure(state=tk.NORMAL)
             self.output_text.insert(tk.END, f"Saved to {self.file_path}\n\n")
@@ -272,6 +278,8 @@ class App:
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
             self.menu.entryconfig(3, state=tk.DISABLED)
+            for child in self.variables_text.get_children():
+                self.variables_text.delete(child)
 
             self.output_text.configure(state=tk.NORMAL)
             self.output_text.insert(tk.END, f"Saved to {self.file_path}\n\n")
