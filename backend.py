@@ -19,13 +19,25 @@ class LexicalAnalyzer:
     ----------
     keywords : tuple
         A list of keywords used by the programming language
+    tokens : list
+        A list of tokens from last tokenize() call
+    errors : list
+        A list of errors from last tokenize() call
+    var_list : list
+        A list of variables from last tokenize() call
 
     Methods
     ----------
     tokenize(string)
-        Converts a given string into a series of tokens and line numbers of possible errors
+        Converts a given string into a series of tokens and returns whether or not errors were encountered
     word_to_token(word)
         Converts a word into a token
+    get_tokens()
+        Returns the list of tokens from last tokenize()
+    get_var_list()
+        Returns the list of variables from last tokenize()
+    get_errors()
+        Returns the list of errors from last tokenize()
     """
 
     def __init__(self) -> None:
@@ -36,7 +48,7 @@ class LexicalAnalyzer:
 
     def tokenize(self, string: str) -> bool:
         """
-        Converts a given string into a series of tokens and line numbers of possible errors
+        Converts a given string into a series of tokens and returns whether or not errors were encountered
 
         Parameters
         ----------
@@ -141,7 +153,7 @@ class LexicalAnalyzer:
         Returns
         -------
         list
-            A list of tokens
+            A list of tokens [(token_name, value), ...]
         """
         
         return self.tokens
@@ -153,7 +165,7 @@ class LexicalAnalyzer:
         Returns
         -------
         list
-            A list of variables
+            A list of variables [(var_name, var_type), ...]
         """
         
         return self.var_list
@@ -165,7 +177,7 @@ class LexicalAnalyzer:
         Returns
         -------
         list
-            A list of errors
+            A list of errors [(error_word, line_number, error_definition), ...]
         """
         
         return self.errors
