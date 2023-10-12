@@ -82,7 +82,7 @@ class LexicalAnalyzer:
                             break
                     if last_token[0] == 'STR' or last_token[0] == 'INT':
                         if var_exist:
-                            self.errors.append((token[1], curr_line, "variable already defined"))
+                            self.errors.append((token[1], curr_line, "duplicate variable definition"))
                         else:
                             self.var_list.append((token[1], last_token[0]))
                     else:

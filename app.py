@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import filedialog
+import re
+from tkinter import filedialog, messagebox
 from backend import *
 
 class App:
@@ -9,6 +10,7 @@ class App:
         self.master.geometry("1400x600")
 
         self.file_path = None
+        self.lex = LexicalAnalyzer()
 
         # Create the main frame
         self.main_frame = tk.Frame(self.master)
@@ -32,18 +34,24 @@ class App:
 
         # Create the scrollbar for input_text
         self.input_scrollbar = tk.Scrollbar(self.editor_frame, command=self.on_scroll)
+        # self.input_scrollbar = tk.Scrollbar(self.editor_frame)
         self.input_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.line_numbers = tk.Text(self.editor_frame, width=4, padx=5, state=tk.DISABLED, highlightthickness=0)
+        self.line_numbers = tk.Text(self.editor_frame, width=4, padx=5, highlightthickness=0)
         self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
+        self.line_numbers.insert("1.0", "1")
+        self.line_numbers.config(yscrollcommand=self.on_line_num_scroll, state=tk.DISABLED)
 
         self.input_text = tk.Text(self.editor_frame, undo=True)
         self.input_text.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.input_text.config(yscrollcommand=self.input_scrollbar.set)
+        self.input_text.config(yscrollcommand=self.on_text_scroll)
 
-        self.input_text.bind('<Configure>', self.on_text_configure)
-        self.input_text.bind('<Key>', self.on_text_configure)
-        self.input_text.bind('<MouseWheel>', self.on_mousewheel)
+        self.input_text.bind('<KeyPress>', self.on_key_press)
+        self.input_text.bind('<KeyRelease>', self.on_key_release)
+        # self.input_text.bind('<Key>', self.on_text_configure)
+        # self.input_text.bind('<MouseWheel>', self.on_mousewheel)
+
+        self.update_line_numbers()
 
        # Label for Console
         self.console_label = tk.Label(self.input_frame, text="Console", anchor="w", font=("Arial", 10, "bold"))
@@ -86,8 +94,8 @@ class App:
 
         # For compile code, show tokenized code, and execute code buttons
         self.menu.add_command(label="Compile Code", command=self.compile_code)
-        self.menu.add_command(label="Show Tokenized Code", command=self.show_tokenized_code)
-        self.menu.add_command(label="Execute Code", command=self.execute_code)
+        self.menu.add_command(label="Show Tokenized Code", command=self.show_tokenized_code, state=tk.DISABLED)
+        self.menu.add_command(label="Execute Code", command=self.execute_code, state=tk.DISABLED)
 
         # Configure row and column weights for resizing
         self.main_frame.grid_rowconfigure(0, weight=1)
@@ -97,22 +105,51 @@ class App:
         self.variables_frame.grid_rowconfigure(1, weight=1)
         self.variables_frame.grid_columnconfigure(1, weight=1)
 
-    def on_text_configure(self, event):
-        line_count = self.input_text.index("end-1c").split('.')[0]
-        line_numbers_text = '\n'.join(str(i) for i in range(1, int(line_count) + 1))
+    def on_key_press(self, event):
+        if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
+            self.update_line_numbers()
+
+    def on_key_release(self, event):
+        if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
+            self.update_line_numbers()
+
+    def update_line_numbers(self):
+        line_count = int(self.input_text.index("end-1c").split('.')[0])
+        # line_numbers_text = '\n'.join(str(i) for i in range(1, int(line_count) + 1))
         self.line_numbers.config(state=tk.NORMAL)
-        self.line_numbers.delete("1.0", tk.END)
-        self.line_numbers.insert("1.0", line_numbers_text)
-        self.line_numbers.config(state=tk.DISABLED)
+        current_line_numbers = self.line_numbers.get("1.0", "end-1c").split('\n')
+        last_num = int(current_line_numbers[len(current_line_numbers) - 1])
+
+        diff = line_count - last_num
+        while diff != 0:
+            if diff > 0:
+                last_num += 1
+                self.line_numbers.insert(str(last_num) + '.0', "\n" + str(last_num))
+            else:
+                last_num -= 1
+                self.line_numbers.delete(str(last_num + 1)+'.0', str(last_num + 2) + '.0')
+            diff = line_count - last_num
+
+        # self.line_numbers.delete("1.0", tk.END)
+        # self.line_numbers.insert("1.0", line_numbers_text)
         self.line_numbers.yview_moveto(self.input_text.yview()[0])
+        self.line_numbers.config(state=tk.DISABLED)
 
     def on_scroll(self, *args):
-        self.input_text.yview_moveto(args[0])
+        self.input_text.yview_moveto(args[1])
+        self.line_numbers.yview_moveto(args[1])
+
+    def on_text_scroll(self, *args):
+        self.input_scrollbar.set(args[0], args[1])
         self.line_numbers.yview_moveto(args[0])
 
-    def on_mousewheel(self, event):
-        self.input_text.yview_scroll(-1 * (event.delta // 120), "units")
-        self.line_numbers.yview_scroll(-1 * (event.delta // 120), "units")
+    def on_line_num_scroll(self, *args):
+        self.input_scrollbar.set(args[0], args[1])
+        self.line_numbers.yview_moveto(self.input_text.yview()[0])
+        # self.input_text.yview_moveto(args[0])
+
+    # def on_mousewheel(self, event):
+    #     self.line_numbers.yview_moveto(self.input_text.yview()[0])
 
     def new_file(self):
         self.file_path = None
@@ -124,18 +161,18 @@ class App:
             self.file_path = file_path
             with open(file_path, "r") as file:
                 content = file.read()
-                if content.endswith('\n'):
-                    content = content[:-1]
+                # if content.endswith('\n'):
+                #     content = content[:-1]
                 self.input_text.delete("1.0", tk.END)
                 self.input_text.insert(tk.END, content)
-            self.on_text_configure(None)
+            self.update_line_numbers()
 
     def save_file(self):
         if self.file_path:
             if not self.file_path.endswith(".iol"):
                 self.file_path += ".iol"
             with open(self.file_path, "w") as file:
-                file.write(self.input_text.get("1.0", tk.END))
+                file.write(self.input_text.get("1.0", "end-1c"))
         else:
             self.save_file_as()
 
@@ -146,13 +183,62 @@ class App:
                 file_path += ".iol"
             self.file_path = file_path
             with open(self.file_path, "w") as file:
-                file.write(self.input_text.get("1.0", tk.END))
+                file.write(self.input_text.get("1.0", "end-1c"))
 
     def compile_code(self):
-        pass
+        self.save_file()
+        if self.file_path == None:
+            return
+
+        self.output_text.configure(state=tk.NORMAL)
+        self.output_text.insert(tk.END, f"Compiling {self.file_path}\n")
+        if self.lex.tokenize(self.input_text.get("1.0", "end-1c")):
+            self.output_text.insert(tk.END, "Lexical analysis completed without errors.\n")
+            self.output_text.yview_moveto(1)
+        else:
+            for error in self.lex.get_errors():
+                self.output_text.insert(tk.END, f"{error[2].capitalize()} {error[0]} found in line {error[1]}\n")
+                self.output_text.yview_moveto(1)
+            self.output_text.insert(tk.END, "Lexical analysis completed with errors.\n")
+            self.output_text.yview_moveto(1)
+
+        # making .tkn file
+        current_token = 0
+        text = self.input_text.get("1.0", "end-1c")
+    
+        text = re.split("(\s+)", text)
+        for i in range(len(text)):
+            if text[i].isspace():
+                continue
+            else:
+                text[i] = self.lex.get_tokens()[current_token][0]
+                current_token += 1
+        
+        tkn_file_path = self.file_path[:-3] + 'tkn'
+        with open(tkn_file_path, "w") as file:
+                file.write(''.join(text))
+        self.output_text.insert(tk.END, f"Tokenized version of the source code saved in {tkn_file_path}\n")
+        self.output_text.configure(state=tk.DISABLED)
+        self.output_text.yview_moveto(1)
+
+        self.variables_text.configure(state=tk.NORMAL)
+        self.variables_text.delete("1.0", tk.END)
+        for var in self.lex.get_var_list():
+            self.variables_text.insert(tk.END, f"{var[0]}\t{var[1]}\n")
+        self.variables_text.configure(state=tk.DISABLED)
+        self.menu.entryconfig(3, state=tk.NORMAL)
+
 
     def show_tokenized_code(self):
-        pass
+        tkn_file_path = self.file_path[:-3] + 'tkn'
+        with open(tkn_file_path, "r") as file:
+            top = tk.Toplevel(self.master)
+            label = tk.Label(top, text="Tokenized Code")
+            label.pack(fill='x')
+            text = tk.Text(top)
+            text.pack(expand=True, fill='both', padx=10, pady=10)
+            text.insert("1.0", file.read())
+            text.configure(state=tk.DISABLED)
 
     def execute_code(self):
         pass
