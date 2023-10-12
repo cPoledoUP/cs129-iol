@@ -342,6 +342,7 @@ class App:
         scroll.pack(side=tk.RIGHT, fill='y')
         text = tk.Text(frame, yscrollcommand=scroll.set)
         text.pack(expand=True, fill='both')
+        scroll.configure(command=text.yview)
 
         with open(tkn_file_path, "r") as file:
             text_with_lines = file.readlines()
@@ -355,7 +356,10 @@ class App:
         Called when user wants to execute a compiled IOL file (unimplemented)
         """
 
-        pass
+        self.output_text.configure(state=tk.NORMAL)
+        self.output_text.insert(tk.END, f"Execute code is not yet implemented.\n\n")
+        self.output_text.configure(state=tk.DISABLED)
+        self.output_text.yview_moveto(1)
 
 if __name__ == "__main__":
     root = tk.Tk()
