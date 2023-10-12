@@ -30,8 +30,11 @@ class LexicalAnalyzer:
 
     def __init__(self) -> None:
         self.keywords = ('IOL', 'LOI', 'INT', 'STR', 'IS', 'INTO', 'IS', 'BEG', 'PRINT', 'ADD', 'SUB', 'MULT', 'DIV', 'MOD', 'NEWLN')
+        self.tokens = list()
+        self.errors = list()
+        self.var_list = list()
 
-    def tokenize(self, string: str) -> list:
+    def tokenize(self, string: str) -> bool:
         """
         Converts a given string into a series of tokens and line numbers of possible errors
 
@@ -42,23 +45,43 @@ class LexicalAnalyzer:
         
         Returns
         -------
-        list
-            The first index contains a list of tokens and the second index contains a list of tuple of an unknown word with line number
+        bool
+            True if no errors encountered, False otherwise
         """
 
-        token_string = list()
-        error_lines = list()
+        self.tokens.clear()
+        self.errors.clear()
+        self.var_list.clear()
 
         curr_line = 0
         for line in string.splitlines():
             curr_line += 1
             for word in line.split():
                 token = self.word_to_token(word)
-                token_string.append(token)
+                self.tokens.append(token)
                 if token[0] == 'ERR_LEX':
-                    error_lines.append((token[1], curr_line))
+                    self.errors.append((token[1], curr_line, "unknown word"))
+                elif token[0] == 'IDENT':
+                    last_token = self.tokens[len(self.tokens) - 2]
+                    var_exist = False
+                    for var in self.var_list:
+                        if token[1] == var[0]:
+                            var_exist = True
+                            break
+                    if last_token[0] == 'STR' or last_token[0] == 'INT':
+                        if var_exist:
+                            self.errors.append((token[1], curr_line, "variable already defined"))
+                        else:
+                            self.var_list.append((token[1], last_token[0]))
+                    else:
+                        if not var_exist:
+                            self.errors.append((token[1], curr_line, "undefined variable"))
+
         
-        return [token_string, error_lines]
+        if len(self.errors) == 0:
+            return True
+        else:
+            return False
 
     def word_to_token(self, word: str) -> tuple:
         """
@@ -110,3 +133,50 @@ class LexicalAnalyzer:
                     possible_token = 'ERR_LEX'
             
             return (possible_token, word)
+    
+    def get_tokens(self) -> list:
+        """
+        Returns the list of tokens from last tokenize()
+        
+        Returns
+        -------
+        list
+            A list of tokens
+        """
+        
+        return self.tokens
+    
+    def get_var_list(self) -> list:
+        """
+        Returns the list of variables from last tokenize()
+        
+        Returns
+        -------
+        list
+            A list of variables
+        """
+        
+        return self.var_list
+    
+    def get_errors(self) -> list:
+        """
+        Returns the list of errors from last tokenize()
+        
+        Returns
+        -------
+        list
+            A list of errors
+        """
+        
+        return self.errors
+    
+if __name__ == '__main__':
+    testfile = open('badvar.iol')
+    test = testfile.read()
+    testfile.close()
+    lex = LexicalAnalyzer()
+    
+    print(lex.tokenize(test))
+    print(lex.get_tokens())
+    print(lex.get_var_list())
+    print(lex.get_errors())
