@@ -1,9 +1,13 @@
 import tkinter as tk
 import re
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 from backend import *
 
 class App:
+    """
+    A class for the UI of the app
+    """
+
     def __init__(self, master):
         self.master = master
         self.master.title("PyDE")
@@ -106,14 +110,28 @@ class App:
         self.variables_frame.grid_columnconfigure(1, weight=1)
 
     def on_key_press(self, event):
+        """
+        Called when a key is pressed on the code editor
+        """
+
+        # v is for ctrl+v (paste)
         if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
             self.update_line_numbers()
 
     def on_key_release(self, event):
+        """
+        Called when a key is released on the code editor
+        """
+
+        # v is for ctrl+v (paste)
         if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
             self.update_line_numbers()
 
     def update_line_numbers(self):
+        """
+        Update the line numbers in the left side of the UI
+        """
+
         line_count = int(self.input_text.index("end-1c").split('.')[0])
         # line_numbers_text = '\n'.join(str(i) for i in range(1, int(line_count) + 1))
         self.line_numbers.config(state=tk.NORMAL)
@@ -136,14 +154,26 @@ class App:
         self.line_numbers.config(state=tk.DISABLED)
 
     def on_scroll(self, *args):
+        """
+        Called when a the code editor scrollbar is dragged
+        """
+
         self.input_text.yview_moveto(args[1])
         self.line_numbers.yview_moveto(args[1])
 
     def on_text_scroll(self, *args):
+        """
+        Called when the main input text is scrolled
+        """
+
         self.input_scrollbar.set(args[0], args[1])
         self.line_numbers.yview_moveto(args[0])
 
     def on_line_num_scroll(self, *args):
+        """
+        Called when the line number text is scrolled
+        """
+
         self.input_scrollbar.set(args[0], args[1])
         self.line_numbers.yview_moveto(self.input_text.yview()[0])
         # self.input_text.yview_moveto(args[0])
@@ -152,12 +182,20 @@ class App:
     #     self.line_numbers.yview_moveto(self.input_text.yview()[0])
 
     def new_file(self):
+        """
+        Called when user wants to create a new file
+        """
+
         self.file_path = None
         self.input_text.delete("1.0", tk.END)
         self.update_line_numbers()
         self.menu.entryconfig(3, state=tk.DISABLED)
 
     def open_file(self):
+        """
+        Called when user wants to open a file
+        """
+
         file_path = filedialog.askopenfilename(filetypes=[("IOL Files", "*.iol")])
         if file_path:
             self.file_path = file_path
@@ -171,15 +209,24 @@ class App:
             self.menu.entryconfig(3, state=tk.DISABLED)
 
     def save_file(self):
+        """
+        Called when user wants to save an opened file
+        """
+
         if self.file_path:
             if not self.file_path.endswith(".iol"):
                 self.file_path += ".iol"
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
+            self.menu.entryconfig(3, state=tk.DISABLED)
         else:
             self.save_file_as()
 
     def save_file_as(self):
+        """
+        Called when user wants to save a file as different file
+        """
+
         file_path = filedialog.asksaveasfilename(defaultextension=".iol", filetypes=[("IOL Files", "*.iol")])
         if file_path:
             if not file_path.endswith(".iol"):
@@ -187,8 +234,13 @@ class App:
             self.file_path = file_path
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
+            self.menu.entryconfig(3, state=tk.DISABLED)
 
     def compile_code(self):
+        """
+        Called when user wants to compile an IOL file
+        """
+
         self.save_file()
         if self.file_path == None:
             return
@@ -200,7 +252,7 @@ class App:
             self.output_text.yview_moveto(1)
         else:
             for error in self.lex.get_errors():
-                self.output_text.insert(tk.END, f"{error[2].capitalize()} {error[0]} found in line {error[1]}\n")
+                self.output_text.insert(tk.END, f"{error[2].capitalize()} {error[0]} found in line {error[1]}.\n")
                 self.output_text.yview_moveto(1)
             self.output_text.insert(tk.END, "Lexical analysis completed with errors.\n")
             self.output_text.yview_moveto(1)
@@ -232,6 +284,10 @@ class App:
         self.menu.entryconfig(3, state=tk.NORMAL)
 
     def show_tokenized_code(self):
+        """
+        Called when user wants to show a tokenized IOL file (tkn file)
+        """
+
         tkn_file_path = self.file_path[:-3] + 'tkn'
         top = tk.Toplevel(self.master)
         label = tk.Label(top, text="Tokenized Code", font=("Arial", 10, "bold"))
@@ -251,6 +307,10 @@ class App:
         text.configure(state=tk.DISABLED)
 
     def execute_code(self):
+        """
+        Called when user wants to execute a compiled IOL file (unimplemented)
+        """
+
         pass
 
 if __name__ == "__main__":

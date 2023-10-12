@@ -181,14 +181,3 @@ class LexicalAnalyzer:
         """
         
         return self.errors
-    
-if __name__ == '__main__':
-    testfile = open('badvar.iol')
-    test = testfile.read()
-    testfile.close()
-    lex = LexicalAnalyzer()
-    
-    print(lex.tokenize(test))
-    print(lex.get_tokens())
-    print(lex.get_var_list())
-    print(lex.get_errors())
