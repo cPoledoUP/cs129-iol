@@ -118,7 +118,7 @@ class App:
         # line_numbers_text = '\n'.join(str(i) for i in range(1, int(line_count) + 1))
         self.line_numbers.config(state=tk.NORMAL)
         current_line_numbers = self.line_numbers.get("1.0", "end-1c").split('\n')
-        last_num = int(current_line_numbers[len(current_line_numbers) - 1])
+        last_num = len(current_line_numbers)
 
         diff = line_count - last_num
         while diff != 0:
@@ -154,6 +154,8 @@ class App:
     def new_file(self):
         self.file_path = None
         self.input_text.delete("1.0", tk.END)
+        self.update_line_numbers()
+        self.menu.entryconfig(3, state=tk.DISABLED)
 
     def open_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("IOL Files", "*.iol")])
@@ -166,6 +168,7 @@ class App:
                 self.input_text.delete("1.0", tk.END)
                 self.input_text.insert(tk.END, content)
             self.update_line_numbers()
+            self.menu.entryconfig(3, state=tk.DISABLED)
 
     def save_file(self):
         if self.file_path:
@@ -228,17 +231,24 @@ class App:
         self.variables_text.configure(state=tk.DISABLED)
         self.menu.entryconfig(3, state=tk.NORMAL)
 
-
     def show_tokenized_code(self):
         tkn_file_path = self.file_path[:-3] + 'tkn'
+        top = tk.Toplevel(self.master)
+        label = tk.Label(top, text="Tokenized Code", font=("Arial", 10, "bold"))
+        label.pack(fill='x')
+        frame = tk.Frame(top)
+        frame.pack(expand=True, fill='both', padx=10, pady=10)
+        scroll = tk.Scrollbar(frame)
+        scroll.pack(side=tk.RIGHT, fill='y')
+        text = tk.Text(frame, yscrollcommand=scroll.set)
+        text.pack(expand=True, fill='both')
+
         with open(tkn_file_path, "r") as file:
-            top = tk.Toplevel(self.master)
-            label = tk.Label(top, text="Tokenized Code")
-            label.pack(fill='x')
-            text = tk.Text(top)
-            text.pack(expand=True, fill='both', padx=10, pady=10)
-            text.insert("1.0", file.read())
-            text.configure(state=tk.DISABLED)
+            text_with_lines = file.readlines()
+            for i in range(len(text_with_lines)):
+                text.insert(f"{i + 1}.0", f"{'{0: <3}'.format(i + 1)} | {text_with_lines[i]}")
+        
+        text.configure(state=tk.DISABLED)
 
     def execute_code(self):
         pass
