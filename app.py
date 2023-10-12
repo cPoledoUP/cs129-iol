@@ -1,6 +1,6 @@
 import tkinter as tk
 import re
-from tkinter import filedialog
+from tkinter import filedialog,  ttk
 from backend import *
 
 class App:
@@ -76,7 +76,15 @@ class App:
                                         font=("Arial", 10, "bold"))
         self.variables_label.pack(side="top", fill="x")
 
-        self.variables_text = tk.Text(self.variables_frame, state=tk.DISABLED)
+        # self.variables_text = tk.Text(self.variables_frame, state=tk.DISABLED)
+        default_headers = ["Variable", "Type"]
+        self.variables_text = ttk.Treeview(self.variables_frame, columns=default_headers, show="headings", selectmode="browse")
+        self.variables_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Insert the default column headers
+        for header in default_headers:
+            self.variables_text.heading(header, text=header)
+            self.variables_text.column(header, minwidth=50, stretch=True)
         self.variables_text.pack(side="left", fill=tk.BOTH, expand=True)
         
         self.variables_scrollbar = tk.Scrollbar(self.variables_frame, command=self.variables_text.yview)
@@ -310,11 +318,13 @@ class App:
         self.output_text.configure(state=tk.DISABLED)
         self.output_text.yview_moveto(1)
 
-        self.variables_text.configure(state=tk.NORMAL)
-        self.variables_text.delete("1.0", tk.END)
+        # self.variables_text.configure(state=tk.NORMAL)
+        # self.variables_text.delete("1.0", tk.END)
+        for child in self.variables_text.get_children():
+            self.variables_text.delete(child)
         for var in self.lex.get_var_list():
-            self.variables_text.insert(tk.END, f"{var[0]}\t{var[1]}\n")
-        self.variables_text.configure(state=tk.DISABLED)
+            self.variables_text.insert("", "end", values=var)
+        # self.variables_text.configure(state=tk.DISABLED)
         self.menu.entryconfig(3, state=tk.NORMAL)
 
     def show_tokenized_code(self):
