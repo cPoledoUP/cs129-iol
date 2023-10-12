@@ -51,7 +51,8 @@ class App:
         self.input_text.config(yscrollcommand=self.on_text_scroll)
 
         self.input_text.bind('<KeyPress>', self.on_key_press)
-        self.input_text.bind('<KeyRelease>', self.on_key_release)
+        # self.input_text.bind('<KeyRelease>', self.on_key_release)
+        self.input_text.focus_set()
         # self.input_text.bind('<Key>', self.on_text_configure)
         # self.input_text.bind('<MouseWheel>', self.on_mousewheel)
 
@@ -89,17 +90,17 @@ class App:
         # For file menu
         self.file_menu = tk.Menu(self.menu, tearoff=False)
         self.menu.add_cascade(label="File", menu=self.file_menu)
-        self.file_menu.add_command(label="New File", command=self.new_file)
-        self.file_menu.add_command(label="Open File", command=self.open_file)
-        self.file_menu.add_command(label="Save File", command=self.save_file)
-        self.file_menu.add_command(label="Save File As", command=self.save_file_as)
+        self.file_menu.add_command(label="New File (Ctrl+N)", command=self.new_file)
+        self.file_menu.add_command(label="Open File (Ctrl+O)", command=self.open_file)
+        self.file_menu.add_command(label="Save File (Ctrl+S)", command=self.save_file)
+        self.file_menu.add_command(label="Save File As (Ctrl+Shift+S)", command=self.save_file_as)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exit", command=self.master.quit)
+        self.file_menu.add_command(label="Exit (Ctrl+Q)", command=self.master.quit)
 
         # For compile code, show tokenized code, and execute code buttons
-        self.menu.add_command(label="Compile Code", command=self.compile_code)
-        self.menu.add_command(label="Show Tokenized Code", command=self.show_tokenized_code, state=tk.DISABLED)
-        self.menu.add_command(label="Execute Code", command=self.execute_code, state=tk.DISABLED)
+        self.menu.add_command(label="(F1) Compile Code", command=self.compile_code)
+        self.menu.add_command(label="(F2) Show Tokenized Code", command=self.show_tokenized_code, state=tk.DISABLED)
+        self.menu.add_command(label="(F3) Execute Code", command=self.execute_code, state=tk.DISABLED)
 
         # Configure row and column weights for resizing
         self.main_frame.grid_rowconfigure(0, weight=1)
@@ -122,10 +123,28 @@ class App:
         """
         Called when a key is released on the code editor
         """
-
+        print(event)
         # v is for ctrl+v (paste)
         if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
             self.update_line_numbers()
+        elif event.keysym == 'F1':
+            self.menu.invoke(2)
+        elif event.keysym == 'F2':
+            self.menu.invoke(3)
+        elif event.keysym == 'F3':
+            self.menu.invoke(4)
+        elif event.state == 4:
+            if event.keysym == 'n' or event.keysym == 'N':
+                self.file_menu.invoke(0)
+            elif event.keysym == 'o' or event.keysym == 'O':
+                self.file_menu.invoke(1)
+            elif event.keysym == 's' or event.keysym == 'S':
+                self.file_menu.invoke(2)
+            elif event.keysym == 'q' or event.keysym == 'Q':
+                self.file_menu.invoke(5)
+        elif event.state == 5:
+            if event.keysym == 's' or event.keysym == 'S':
+                self.file_menu.invoke(3)
 
     def update_line_numbers(self):
         """
@@ -316,4 +335,5 @@ class App:
 if __name__ == "__main__":
     root = tk.Tk()
     editor = App(root)
+    root.bind_all('<KeyRelease>', editor.on_key_release)
     root.mainloop()
