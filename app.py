@@ -123,7 +123,7 @@ class App:
         """
         Called when a key is released on the code editor
         """
-        print(event)
+        
         # v is for ctrl+v (paste)
         if event.keysym == 'Return' or event.keysym == 'BackSpace' or event.keysym == 'v' or event.keysym == 'V':
             self.update_line_numbers()
@@ -133,7 +133,7 @@ class App:
             self.menu.invoke(3)
         elif event.keysym == 'F3':
             self.menu.invoke(4)
-        elif event.state == 4:
+        elif event.state == 4:  # keypress with Ctrl
             if event.keysym == 'n' or event.keysym == 'N':
                 self.file_menu.invoke(0)
             elif event.keysym == 'o' or event.keysym == 'O':
@@ -142,7 +142,7 @@ class App:
                 self.file_menu.invoke(2)
             elif event.keysym == 'q' or event.keysym == 'Q':
                 self.file_menu.invoke(5)
-        elif event.state == 5:
+        elif event.state == 5:  # keypress with Ctrl and Shift
             if event.keysym == 's' or event.keysym == 'S':
                 self.file_menu.invoke(3)
 
@@ -227,6 +227,11 @@ class App:
             self.update_line_numbers()
             self.menu.entryconfig(3, state=tk.DISABLED)
 
+            self.output_text.configure(state=tk.NORMAL)
+            self.output_text.insert(tk.END, f"Opened {self.file_path}\n\n")
+            self.output_text.configure(state=tk.DISABLED)
+            self.output_text.yview_moveto(1)
+
     def save_file(self):
         """
         Called when user wants to save an opened file
@@ -238,6 +243,11 @@ class App:
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
             self.menu.entryconfig(3, state=tk.DISABLED)
+
+            self.output_text.configure(state=tk.NORMAL)
+            self.output_text.insert(tk.END, f"Saved to {self.file_path}\n\n")
+            self.output_text.configure(state=tk.DISABLED)
+            self.output_text.yview_moveto(1)
         else:
             self.save_file_as()
 
@@ -255,6 +265,11 @@ class App:
                 file.write(self.input_text.get("1.0", "end-1c"))
             self.menu.entryconfig(3, state=tk.DISABLED)
 
+            self.output_text.configure(state=tk.NORMAL)
+            self.output_text.insert(tk.END, f"Saved to {self.file_path}\n\n")
+            self.output_text.configure(state=tk.DISABLED)
+            self.output_text.yview_moveto(1)
+
     def compile_code(self):
         """
         Called when user wants to compile an IOL file
@@ -266,7 +281,7 @@ class App:
 
         self.output_text.configure(state=tk.NORMAL)
         self.output_text.insert(tk.END, f"Compiling {self.file_path}\n")
-        if self.lex.tokenize(self.input_text.get("1.0", "end-1c")):
+        if self.lex.tokenize(self.input_text.get("1.0", tk.END)):
             self.output_text.insert(tk.END, "Lexical analysis completed without errors.\n")
             self.output_text.yview_moveto(1)
         else:
@@ -278,11 +293,11 @@ class App:
 
         # making .tkn file
         current_token = 0
-        text = self.input_text.get("1.0", "end-1c")
-    
+        text = self.input_text.get("1.0", tk.END)
         text = re.split("(\s+)", text)
+
         for i in range(len(text)):
-            if text[i].isspace():
+            if text[i].isspace() or text[i] == '':
                 continue
             else:
                 text[i] = self.lex.get_tokens()[current_token][0]
@@ -291,7 +306,7 @@ class App:
         tkn_file_path = self.file_path[:-3] + 'tkn'
         with open(tkn_file_path, "w") as file:
                 file.write(''.join(text))
-        self.output_text.insert(tk.END, f"Tokenized version of the source code saved in {tkn_file_path}\n")
+        self.output_text.insert(tk.END, f"Tokenized version of the source code saved in {tkn_file_path}\n\n")
         self.output_text.configure(state=tk.DISABLED)
         self.output_text.yview_moveto(1)
 
