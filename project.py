@@ -263,17 +263,18 @@ class SyntaxAnalyzer:
             "expr": ["", "", "", "", "", "", "", "", "", 15, 16, 17, 18, 19, 20, 21],
         }
 
+    """Returns the process in trying to check if an input string is a valid word according to the grammar
+
+    Args:
+        input_path (str): .tkn file path
+        sym_tbl (dict[str, list[str | int]]): symbol table
+        tokens (list[tuple[str, str]]): token stream
+
+    Returns:
+        list[tuple[int, str] | None]: error details [(line_number, error_details), ...]
+    """
     def check_input(self, input_path: str, sym_tbl: dict[str, list[str | int]], tokens: list[tuple[str, str]]) -> list[tuple[int, str] | None]:
-        """Returns the process in trying to check if an input string is a valid word according to the grammar
-
-        Args:
-            input_path (str): .tkn file path
-            sym_tbl (dict[str, list[str | int]]): symbol table
-            tokens (list[tuple[str, str]]): token stream
-
-        Returns:
-            list[tuple[int, str] | None]: error details [(line_number, error_details), ...]
-        """
+        
         with open(input_path, "r") as file:
             input = file.readlines()
         prod = self.prod
