@@ -3,11 +3,11 @@ IOL
     STR msg1 STR msg2 STR msg3
     BEG msg1 BEG msg2
     BEG 31s
-    NEWLN PRINT msg1
+    NEWLN PRINT msg1 badvar INT dupvar
     NEWLN
     INTO res IS MULT num num
     PRINT msg2
-    PRINT MULT num 2
+    PRINT MULT num 2 STR dupvar
     NEWL!N
     PRINT msg3
     PRINT res
