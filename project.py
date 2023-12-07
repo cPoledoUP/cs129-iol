@@ -329,8 +329,10 @@ class SyntaxAnalyzer:
                 semantic_case = None
                 last_ident_token = None
             if curr_input == "LOI" and not loi_end_found:
-                stack = ["$"]
-                curr_stack = "LOI"
+                loi_end_found = True
+                if curr_stack == "stmt":
+                    curr_stack = "LOI"
+                    stack = ["$"]
 
             if curr_input == curr_stack:
                 # for matching case, just remove the terminal in both columns
@@ -437,7 +439,7 @@ class SyntaxAnalyzer:
             # save the current step
             error_recovering = False
         
-        if len(stack) > 1:
+        if not loi_end_found:
             current_error = f"Expected a 'LOI' at the end of file"
             list_errors.append((line_num, current_error))
         return list_errors
