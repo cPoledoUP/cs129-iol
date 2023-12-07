@@ -217,7 +217,8 @@ class SyntaxAnalyzer:
             ["stmts", "e"],
             ["stmt", "var"],
             ["stmt", "asn"],
-            ["stmt", "out"],
+            ["stmt", "expr"],
+            ["stmt", "PRINT expr"],
             ["stmt", "NEWLN"],
             ["var", "INT IDENT varend"],
             ["var", "STR IDENT varend"],
@@ -225,7 +226,6 @@ class SyntaxAnalyzer:
             ["varend", "e"],
             ["asn", "INTO IDENT IS expr"],
             ["asn", "BEG IDENT"],
-            ["out", "PRINT expr"],
             ["expr", "ADD expr expr"],
             ["expr", "SUB expr expr"],
             ["expr", "MULT expr expr"],
@@ -254,12 +254,11 @@ class SyntaxAnalyzer:
                 "INT_LIT",
             ],
             "s": [1, "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
-            "stmts": ["", 2, 2, 2, 2, 2, 2, 3, "", "", "", "", "", "", "", ""],
-            "stmt": ["", 4, 4, 5, 5, 6, 7, "", "", "", "", "", "", "", "", ""],
-            "var": ["", 8, 9, "", "", "", "", "", "", "", "", "", "", "", "", ""],
-            "varend": ["", 11, 11, 11, 11, 11, 11, 11, 10, "", "", "", "", "", "", ""],
-            "asn": ["", "", "", 12, 13, "", "", "", "", "", "", "", "", "", "", ""],
-            "out": ["", "", "", "", "", 14, "", "", "", "", "", "", "", "", "", ""],
+            "stmts": ["", 2, 2, 2, 2, 2, 2, 3, "", 2, 2, 2, 2, 2, 2, 2],
+            "stmt": ["", 4, 4, 5, 5, 7, 8, "", "", 6, 6, 6, 6, 6, 6, 6],
+            "var": ["", 9, 10, "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            "varend": ["", 12, 12, 12, 12, 12, 12, 12, 11, 12, 12, 12, 12, 12, 12, 12],
+            "asn": ["", "", "", 13, 14, "", "", "", "", "", "", "", "", "", "", ""],
             "expr": ["", "", "", "", "", "", "", "", "", 15, 16, 17, 18, 19, 20, 21],
         }
 
@@ -290,6 +289,7 @@ class SyntaxAnalyzer:
 
         # vars related to error
         error_recovering = False
+        loi_end_found = False
 
         # vars related to type checking
         tokens.append(("$", "$"))
@@ -300,19 +300,37 @@ class SyntaxAnalyzer:
 
         while len(input) != 0 or len(input_buffer) != 0:
             if len(input_buffer) == 1 and len(input) > 0:
-                input_buffer = input.pop(0).split() + ["$"]
+                new_line = input.pop(0).split()
                 line_num += 1
+                # check if popped line is empty
+                while len(new_line) == 0 and len(input) > 0:
+                    new_line = input.pop(0).split()
+                    line_num += 1
+                input_buffer = new_line + ["$"]
+
+            # if input buffer still only has $, stop
+            if len(input_buffer) == 1:
+                break
 
             if error_recovering:
-                stack = ["stmt", "stmts", "LOI", "$"]
+                if loi_end_found:
+                    stack = ["$"]
+                else:
+                    stack = ["stmt", "stmts", "LOI", "$"]
                 error_recovering = False
-                statement.clear()
-                semantic_case = None
                 continue
-
+            
             curr_stack = stack.pop(0)
             curr_input = input_buffer[0]
-            
+
+            # for displaying semantic analysis errors
+            if curr_stack == "stmt":
+                statement.clear()
+                semantic_case = None
+                last_ident_token = None
+            if curr_input == "LOI" and not loi_end_found:
+                stack = ["$"]
+                curr_stack = "LOI"
 
             if curr_input == curr_stack:
                 # for matching case, just remove the terminal in both columns
@@ -323,19 +341,16 @@ class SyntaxAnalyzer:
                 match popped_token[0]:
                     case "INT" | "STR":
                         semantic_case = "DECLARE"
-                        statement.clear()
                         statement.append(popped_token[1])
                     case "INTO":
                         semantic_case = "INTO"
-                        statement.clear()
                         statement.append(popped_token[1])
                     case "ADD" | "SUB" | "MULT" | "DIV" | "MOD":
                         statement.append(popped_token[1])
-                        if last_ident_token[1] in declared_vars:
-                            if semantic_case == "IS" and sym_tbl[last_ident_token[1]][0] != "INT":
-                                current_error = f"Type error '{" ".join(statement)}'. {last_ident_token[1]} is of type STR"
+                        if semantic_case == "IS":
+                            if last_ident_token[1] in declared_vars and sym_tbl[last_ident_token[1]][0] != "INT":
+                                current_error = f"Type error '{" ".join(statement)}'. '{last_ident_token[1]}' is of type STR"
                                 list_errors.append((line_num, current_error))
-                                semantic_case = None
                         semantic_case = "MATH"
                     case "IS":
                         semantic_case = "IS"
@@ -344,36 +359,30 @@ class SyntaxAnalyzer:
                         statement.append(popped_token[1])
                         if semantic_case == "DECLARE":
                             if popped_token[1] in declared_vars:
-                                current_error = f"Duplicate variable declaration {popped_token[1]} in '{" ".join(statement)}'"
+                                current_error = f"Duplicate variable declaration '{popped_token[1]}' in '{" ".join(statement)}'"
                                 list_errors.append((line_num, current_error)) 
                             else:
                                 declared_vars.append(popped_token[1])
-                            semantic_case = None
                         elif popped_token[1] not in declared_vars:
-                            current_error = f"Undefined variable {popped_token[1]} in '{" ".join(statement)}'"
+                            current_error = f"Undefined variable '{popped_token[1]}' in '{" ".join(statement)}'"
                             list_errors.append((line_num, current_error))
                         elif semantic_case == "IS":
                             if sym_tbl[last_ident_token[1]][0] != sym_tbl[popped_token[1]][0]:
-                                current_error = f"Type error '{" ".join(statement)}'. {last_ident_token[1]} is of type {sym_tbl[last_ident_token[1]][0]}"
+                                current_error = f"Type error '{" ".join(statement)}'. '{last_ident_token[1]}' is of type {sym_tbl[last_ident_token[1]][0]}"
                                 list_errors.append((line_num, current_error))
-                            semantic_case = None
                         elif semantic_case == "MATH":
                             if sym_tbl[popped_token[1]][0] != "INT":
-                                current_error = f"Type error '{" ".join(statement)}'. {popped_token[1]} is of type {sym_tbl[popped_token[1]][0]}"
+                                current_error = f"Type error '{" ".join(statement)}'. '{popped_token[1]}' is of type {sym_tbl[popped_token[1]][0]}"
                                 list_errors.append((line_num, current_error))
-                                semantic_case = None
                         last_ident_token = popped_token
                     case "INT_LIT":
                         statement.append(popped_token[1])
-                        if last_ident_token[1] in declared_vars:
-                            if semantic_case == "IS" and sym_tbl[last_ident_token[1]][0] != "INT":
-                                current_error = f"Type error '{" ".join(statement)}'. {last_ident_token[1]} is of type STR"
+                        if semantic_case == "IS":
+                            if last_ident_token[1] in declared_vars and sym_tbl[last_ident_token[1]][0] != "INT":
+                                current_error = f"Type error '{" ".join(statement)}'. '{last_ident_token[1]}' is of type STR"
                                 list_errors.append((line_num, current_error))
-                            semantic_case = None
                     case _:
-                        statement.clear()
                         statement.append(popped_token[1])
-                        semantic_case = None
                     
             else:
                 if curr_stack not in ptbl:
@@ -381,10 +390,11 @@ class SyntaxAnalyzer:
                     #     f"{line_num} Error: '{curr_stack}' is not a nonterminal in parse table"
                     # )
                     if curr_stack == "$":
-                        current_error = f"Expected no tokens after 'LOI' but found '{input_buffer.pop(0)}'"
+                        current_error = f"({tokens.pop(0)[1]}) Expected no tokens after 'LOI' but found '{input_buffer.pop(0)}'"
+                        loi_end_found = True
                     else:
-                        current_error = f"Expected '{curr_stack}' token, got '{input_buffer.pop(0)}'"
-                    tokens.pop(0)
+                        current_error = f"({tokens.pop(0)[1]}) Expected '{curr_stack}' token, got '{input_buffer.pop(0)}'"
+                    
                     list_errors.append((line_num, current_error))
                     error_recovering = True
                     continue
@@ -393,7 +403,7 @@ class SyntaxAnalyzer:
                     #     f"{line_num} Error: '{curr_input}' is not a terminal in parse table"
                     # )
                     if curr_input == "$":
-                        current_error = "Expected a 'LOI' at the end of file, none was found"
+                        current_error = f"({tokens.pop(0)[1]}) Expected a 'LOI' at the end of file"
                         input_buffer.pop(0)
                     else:
                         possible_tokens = [
@@ -401,8 +411,8 @@ class SyntaxAnalyzer:
                             for i in range(len(ptbl["terminals"]))
                             if ptbl[curr_stack][i] != ""
                         ]
-                        current_error = f"Expected '{"','".join(possible_tokens)}' token, got '{input_buffer.pop(0)}'"
-                    tokens.pop(0)
+                        current_error = f"({tokens.pop(0)[1]}) Expected '{"','".join(possible_tokens)}' token, got '{input_buffer.pop(0)}'"
+                    
                     list_errors.append((line_num, current_error))
                     error_recovering = True
                     continue
@@ -415,8 +425,8 @@ class SyntaxAnalyzer:
                         for i in range(len(ptbl["terminals"]))
                         if ptbl[curr_stack][i] != ""
                     ]
-                    current_error = f"Expected '{"','".join(possible_tokens)}' token, got '{input_buffer.pop(0)}'"
-                    tokens.pop(0)
+                    current_error = f"({tokens.pop(0)[1]}) Expected '{"','".join(possible_tokens)}' token, got '{input_buffer.pop(0)}'"
+                    
                     list_errors.append((line_num, current_error))
                     error_recovering = True
                     continue
@@ -426,7 +436,10 @@ class SyntaxAnalyzer:
                     stack = prod_to_replace[1].split() + stack
             # save the current step
             error_recovering = False
-
+        
+        if len(stack) > 1:
+            current_error = f"Expected a 'LOI' at the end of file"
+            list_errors.append((line_num, current_error))
         return list_errors
 
     
