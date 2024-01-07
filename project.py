@@ -173,8 +173,6 @@ class LexicalAnalyzer:
                 else:
                     possible_token = "ERR_LEX"
 
-            if possible_token == "INT_LIT":
-                word = int(word)
             return (possible_token, word)
 
     """
@@ -932,8 +930,8 @@ class App:
                 # evaluate the operations
                 # loop as long as there is a solvable operator
                 while len(expr_stack) >= 3 and type(expr_stack[-1]) != str and type(expr_stack[-2]) != str:
-                    num2 = expr_stack.pop()
-                    num1 = expr_stack.pop()
+                    num2 = int(expr_stack.pop())
+                    num1 = int(expr_stack.pop())
                     op = expr_stack.pop()
                     match op:
                         case "ADD":
