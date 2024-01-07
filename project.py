@@ -10,7 +10,7 @@
 
 import tkinter as tk
 import re
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, simpledialog
         
 
 class LexicalAnalyzer:
@@ -173,6 +173,8 @@ class LexicalAnalyzer:
                 else:
                     possible_token = "ERR_LEX"
 
+            if possible_token == "INT_LIT":
+                word = int(word)
             return (possible_token, word)
 
     """
@@ -185,7 +187,7 @@ class LexicalAnalyzer:
     """
     def get_tokens(self) -> list:
 
-        return self.tokens
+        return self.tokens.copy()
 
     """
     Returns the list of errors from last tokenize()
@@ -704,7 +706,9 @@ class App:
         self.file_path = None
         self.input_text.delete("1.0", tk.END)
         self.update_line_numbers()
+        # disable show tokenized code and execute code button
         self.menu.entryconfig(3, state=tk.DISABLED)
+        self.menu.entryconfig(4, state=tk.DISABLED)
         for child in self.variables_text.get_children():
             self.variables_text.delete(child)
 
@@ -723,7 +727,9 @@ class App:
                 self.input_text.delete("1.0", tk.END)
                 self.input_text.insert(tk.END, content)
             self.update_line_numbers()
+            # disable show tokenized code and execute code button
             self.menu.entryconfig(3, state=tk.DISABLED)
+            self.menu.entryconfig(4, state=tk.DISABLED)
             for child in self.variables_text.get_children():
                 self.variables_text.delete(child)
 
@@ -742,7 +748,9 @@ class App:
                 self.file_path += ".iol"
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
+            # disable show tokenized code and execute code button
             self.menu.entryconfig(3, state=tk.DISABLED)
+            self.menu.entryconfig(4, state=tk.DISABLED)
             for child in self.variables_text.get_children():
                 self.variables_text.delete(child)
 
@@ -767,7 +775,9 @@ class App:
             self.file_path = file_path
             with open(self.file_path, "w") as file:
                 file.write(self.input_text.get("1.0", "end-1c"))
+            # disable show tokenized code and execute code button
             self.menu.entryconfig(3, state=tk.DISABLED)
+            self.menu.entryconfig(4, state=tk.DISABLED)
             for child in self.variables_text.get_children():
                 self.variables_text.delete(child)
 
@@ -827,6 +837,7 @@ class App:
         self.output_text.configure(state=tk.DISABLED)
         self.output_text.yview_moveto(1)
 
+        # display proper outputs and enable show tokenized code button
         # self.variables_text.configure(state=tk.NORMAL)
         # self.variables_text.delete("1.0", tk.END)
         for child in self.variables_text.get_children():
@@ -847,9 +858,13 @@ class App:
                 )         
             self.output_text.insert(tk.END, "Syntax analysis completed with error(s).\n")
             self.output_text.yview_moveto(1)
+            # when there is error, disable the execute code button
+            self.menu.entryconfig(4, state=tk.DISABLED)
         if not syntax_errors:
             self.output_text.insert(tk.END, "Syntax analysis completed without errors.\n")
             self.output_text.yview_moveto(1)
+            # when there is no error, enable the execute code button
+            self.menu.entryconfig(4, state=tk.NORMAL)
         self.output_text.configure(state=tk.DISABLED)
         
 
@@ -880,14 +895,126 @@ class App:
         text.configure(state=tk.DISABLED)
 
     """
-    Called when user wants to execute a compiled IOL file (unimplemented)
+    Called when user wants to execute a compiled IOL file
     """
     def execute_code(self):
-
+        # make the output text writable
         self.output_text.configure(state=tk.NORMAL)
-        self.output_text.insert(tk.END, f"Execute code is not yet implemented.\n\n")
-        self.output_text.configure(state=tk.DISABLED)
+        self.output_text.insert(tk.END, f"\nIOL Execution:\n\n")
         self.output_text.yview_moveto(1)
+        token_stream = self.lex.get_tokens()
+        # add a shallow copy of dict entries
+        symbol_table = self.sym_tbl.copy()
+        for key in symbol_table:
+            symbol_table[key] = symbol_table[key].copy()
+
+        # traverse the token stream linearly and do tasks
+        current_task = None
+        evaluating_expr = False
+        last_expr_value = None
+        expr_stack = list()
+        for i, token in enumerate(token_stream):
+            # tokens associated with an action:
+            # "BEG","PRINT","NEWLN","IS","ADD","SUB","MULT","DIV","MOD"
+            if token[0] in ["BEG","PRINT","NEWLN","IS"]:
+                current_task = (token[0], i)
+            
+            # evaluate an expression
+            if evaluating_expr:
+                match token[0]:
+                    case "IDENT":
+                        expr_stack.append(symbol_table[token[1]][1])    # push the value of the variable to the stack
+                    case "INT_LIT":
+                        expr_stack.append(token[1]) # push the int lit value to the stack
+                    case "ADD" | "SUB" | "MULT" | "DIV" | "MOD":
+                        expr_stack.append(token[0])  # push the operator to the stack
+                    
+                # evaluate the operations
+                # loop as long as there is a solvable operator
+                while len(expr_stack) >= 3 and type(expr_stack[-1]) != str and type(expr_stack[-2]) != str:
+                    num2 = expr_stack.pop()
+                    num1 = expr_stack.pop()
+                    op = expr_stack.pop()
+                    match op:
+                        case "ADD":
+                            expr_stack.append(num1 + num2)
+                        case "SUB":
+                            expr_stack.append(num1 - num2)
+                        case "MULT":
+                            expr_stack.append(num1 * num2)
+                        case "DIV":
+                            if num2 == 0:
+                                self.output_text.insert(tk.END, f"\n\nProgram terminated with error: Division by zero.\n\n")
+                                self.output_text.yview_moveto(1)
+                                self.output_text.configure(state=tk.DISABLED)  
+                                return
+                            expr_stack.append(num1 // num2) # using // operator removes decimal points
+                        case "MOD":
+                            expr_stack.append(num1 % num2)
+                    # print(num1, op, num2, "=", expr_stack[-1])
+                
+                # if we get a single value in the expr_stack, expression has finished evaluating
+                if len(expr_stack) == 1 and expr_stack[0] not in ["ADD", "SUB", "MULT", "DIV", "MOD"]:
+                    last_expr_value = expr_stack.pop()
+                    evaluating_expr = False
+
+            # do task based on current task
+            if current_task != None:
+                match current_task[0]:
+                    case "BEG": # input operation
+                        if token[0] != "IDENT":
+                            continue
+                        else:
+                            root.update()   # simpledialog goes behind root without this for some reason
+                            user_input = simpledialog.askstring("Input", f"Input for {token[1]}")
+                            self.output_text.insert(tk.END, f"Input for {token[1]}: {user_input}\n")
+                            self.output_text.yview_moveto(1)
+                            # store the new value
+                            if user_input == None:
+                                self.output_text.insert(tk.END, f"\n\nProgram terminated with error: User cancelled the input operation.\n\n")
+                                self.output_text.yview_moveto(1)
+                                self.output_text.configure(state=tk.DISABLED)  
+                                return
+                            elif symbol_table[token[1]][0] == "INT":
+                                # type mismatch
+                                if not user_input.isdigit():
+                                    self.output_text.insert(tk.END, f"\n\nProgram terminated with error: {token[1]} expected an INT, got STR instead.\n\n")
+                                    self.output_text.yview_moveto(1)
+                                    self.output_text.configure(state=tk.DISABLED)
+                                    return
+                                else:
+                                    symbol_table[token[1]][1] = int(user_input)
+                            else:
+                                symbol_table[token[1]][1] = user_input
+                            current_task = None
+                    case "PRINT":   # output operation
+                        if last_expr_value == None:
+                            # evaluate the expression first
+                            evaluating_expr = True
+                        else:
+                            # print the value of the expression
+                            self.output_text.insert(tk.END, f"{last_expr_value}")
+                            self.output_text.yview_moveto(1)
+                            current_task = None
+                            last_expr_value = None
+                    case "NEWLN":   # appends a new line
+                        self.output_text.insert(tk.END, "\n")
+                        self.output_text.yview_moveto(1)
+                        current_task = None
+                    case "IS":  # assignment operation
+                        if last_expr_value == None:
+                            # evaluate the expression first
+                            evaluating_expr = True
+                        else:
+                            # store the evaluated expression to the variable
+                            symbol_table[token_stream[current_task[1] - 1][1]][1] = last_expr_value
+                            current_task = None
+                            last_expr_value = None
+        
+        # finally, disable the console from user input
+        self.output_text.insert(tk.END, f"\n\nProgram terminated successfully...\n\n")
+        self.output_text.yview_moveto(1)
+        self.output_text.configure(state=tk.DISABLED)
 
 
 if __name__ == "__main__":
