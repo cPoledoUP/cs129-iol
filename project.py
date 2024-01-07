@@ -173,6 +173,8 @@ class LexicalAnalyzer:
                 else:
                     possible_token = "ERR_LEX"
 
+            if possible_token == "INT_LIT":
+                word = int(word)
             return (possible_token, word)
 
     """
@@ -378,7 +380,7 @@ class SyntaxAnalyzer:
                                 list_errors.append((line_num, current_error))
                         last_ident_token = popped_token
                     case "INT_LIT":
-                        statement.append(popped_token[1])
+                        statement.append(str(popped_token[1]))
                         if semantic_case == "IS":
                             if last_ident_token[1] in declared_vars and sym_tbl[last_ident_token[1]][0] != "INT":
                                 current_error = f"Type error '{" ".join(statement)}'. '{last_ident_token[1]}' is of type STR"
@@ -930,8 +932,8 @@ class App:
                 # evaluate the operations
                 # loop as long as there is a solvable operator
                 while len(expr_stack) >= 3 and type(expr_stack[-1]) != str and type(expr_stack[-2]) != str:
-                    num2 = int(expr_stack.pop())
-                    num1 = int(expr_stack.pop())
+                    num2 = expr_stack.pop()
+                    num1 = expr_stack.pop()
                     op = expr_stack.pop()
                     match op:
                         case "ADD":
